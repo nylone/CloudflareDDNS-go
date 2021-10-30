@@ -6,6 +6,7 @@ import (
 	"github.com/kkyr/fig"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -83,6 +84,7 @@ func main() {
 func checkErr(err error) {
 	if err != nil {
 		lit.Error("\n%s", err)
+		os.Exit(1)
 	}
 }
 
