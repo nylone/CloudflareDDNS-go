@@ -7,3 +7,4 @@ zones:                    # define the zone/zones you wish to cover
         - v6.example.com: # do not forget to add the " : " at the end of the declaration
       v6-records:         # records of type A (leave empty or omit for none)
         - v6.example.com:
+loglevel: "error"         # if you want more info about what the program is doing, change it to "info"

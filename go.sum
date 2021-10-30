@@ -1,3 +1,5 @@
+github.com/bwmarrin/lit v0.0.0-20190813132558-fd4b44871312 h1:g5NUBR8yN3F2RWN4vrkd8wVr7vyLxr0hbq4I6PAZQc0=
+github.com/bwmarrin/lit v0.0.0-20190813132558-fd4b44871312/go.mod h1:z4cxqo0ARxc42jGHYZT4XoICeLf9OVOkysN7LuqBZ24=
 github.com/kkyr/fig v0.3.0 h1:5bd1amYKp/gsK2bGEUJYzcCrQPKOZp6HZD9K21v9Guo=
 github.com/kkyr/fig v0.3.0/go.mod h1:fEnrLjwg/iwSr8ksJF4DxrDmCUir5CaVMLORGYMcz30=
 github.com/mitchellh/mapstructure v1.4.1 h1:CpVNEelQCZBooIPDn+AR3NpivK/TIKU8bDxdASFVQag=

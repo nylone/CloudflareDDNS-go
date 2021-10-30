@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/nylone/CloudflareDDNS-go)](https://goreportcard.com/report/github.com/nylone/CloudflareDDNS-go)
+# CloudflareDDNS-go
 ### How to use
 - Clone the repo
 - Make a copy of example-config.yml and rename it to config.yml
