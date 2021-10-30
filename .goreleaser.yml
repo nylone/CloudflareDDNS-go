@@ -24,7 +24,7 @@ archives:
       amd64: x86_64
     files:
       - README.md
-      - LICENSE
+      - LICENSE.md
       - example-config.yml
 checksum:
   name_template: checksums.txt
