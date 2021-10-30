@@ -33,7 +33,6 @@ func init() {
 }
 
 func main() {
-	wg := sync.WaitGroup{}
 	var (
 		currIPv4 string
 		currIPv6 string
@@ -41,42 +40,44 @@ func main() {
 		newIPv6  string
 	)
 	for {
-		lit.Info("\nChecking public IP updates")
-		wg.Add(2)
-		go getIP("https://api.ipify.org", &newIPv4, &wg)
-		go getIP("https://api6.ipify.org", &newIPv6, &wg)
-		wg.Wait()
-		lit.Info("\npublic IP check complete")
-		if currIPv4 != newIPv4 {
-			lit.Info("\ndetected public IPv4 change.%s setting to ", currIPv4, newIPv4)
-			currIPv4 = newIPv4
-			for _, zone := range records {
-				zone := zone
-				for _, record := range zone.Records {
-					record := record
-					if record.Type == "A" {
-						wg.Add(1)
-						go patchRecord(zone, record, currIPv4, &wg)
+		if cfg.DoIPv4 {
+			lit.Info("\nChecking public IPv4 updates")
+			go func() {
+				getIP("https://api.ipify.org", &newIPv4)
+				if currIPv4 != newIPv4 {
+					lit.Info("\ndetected public IPv4 change.%s setting to ", currIPv4, newIPv4)
+					currIPv4 = newIPv4
+					for _, zone := range records {
+						zone := zone
+						for _, record := range zone.Records {
+							record := record
+							if record.Type == "A" {
+								go patchRecord(zone, record, currIPv4)
+							}
+						}
 					}
 				}
-			}
+			}()
 		}
-		if currIPv6 != newIPv6 {
-			lit.Info("\ndetected public IPv6 change.%s setting to %s", currIPv6, newIPv6)
-			currIPv6 = newIPv6
-			for _, zone := range records {
-				zone := zone
-				for _, record := range zone.Records {
-					record := record
-					if record.Type == "AAAA" {
-						wg.Add(1)
-						go patchRecord(zone, record, currIPv6, &wg)
+		if cfg.DoIPv6 {
+			lit.Info("\nChecking public IPv6 updates")
+			go func() {
+				getIP("https://api6.ipify.org", &newIPv6)
+				if currIPv6 != newIPv6 {
+					lit.Info("\ndetected public IPv6 change.%s setting to %s", currIPv6, newIPv6)
+					currIPv6 = newIPv6
+					for _, zone := range records {
+						zone := zone
+						for _, record := range zone.Records {
+							record := record
+							if record.Type == "AAAA" {
+								go patchRecord(zone, record, currIPv6)
+							}
+						}
 					}
 				}
-			}
+			}()
 		}
-		wg.Wait()
-		lit.Info("\nUpdate cycle complete")
 		time.Sleep(cfg.Timeout)
 	}
 }
@@ -89,8 +90,7 @@ func checkErr(err error) {
 }
 
 // return public IP address of the machine
-func getIP(url string, ip *string, group *sync.WaitGroup) {
-	defer group.Done()
+func getIP(url string, ip *string) {
 	response, err := http.Get(url)
 	if err == nil {
 		defer func(Body io.ReadCloser) {
@@ -162,8 +162,7 @@ func getRecords() {
 	}
 }
 
-func patchRecord(zone zoneAndRecords, record dnsRecord, ip string, wg *sync.WaitGroup) {
-	defer wg.Done()
+func patchRecord(zone zoneAndRecords, record dnsRecord, ip string) {
 	request, err := http.NewRequest("PATCH", strings.Join([]string{baseAPIUrl, zone.ZoneID, "/dns_records/", record.ID}, ""),
 		strings.NewReader("{\"content\":\""+ip+"\"}"))
 	request.Header.Add("authorization", "Bearer "+cfg.Token)

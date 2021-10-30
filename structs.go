@@ -5,13 +5,15 @@ import (
 )
 
 type config struct {
-	Token   string `fig:"token" validate:"required"`
-	Domains map[string]struct {
+	Token    string        `fig:"token" validate:"required"`
+	Timeout  time.Duration `fig:"timeout" default:"60s"`
+	DoIPv4   bool          `fig:"do-ipv4"`
+	DoIPv6   bool          `fig:"do-ipv6"`
+	LogLevel string        `fig:"loglevel" default:"error"`
+	Domains  map[string]struct {
 		V4Records map[string]interface{} `fig:"v4-records"`
 		V6Records map[string]interface{} `fig:"v6-records"`
 	} `fig:"zones" validate:"required"`
-	Timeout  time.Duration `fig:"timeout" default:"60s"`
-	LogLevel string        `fig:"loglevel" default:"error"`
 }
 
 type apiZones struct {

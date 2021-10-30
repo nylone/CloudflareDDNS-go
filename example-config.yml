@@ -1,5 +1,7 @@
 token: "cloudflare token" # the cloudflare api token
 timeout: "30s"            # how often do you want to check for ip updates?
+do-ipv4: true             # set to true to check for ipv4 changes
+do-ipv6: true             # set to true to check for ipv6 changes
 zones:                    # define the zone/zones you wish to cover
   - example.com:
       v4-records:         # records of type A (leave empty or omit for none)
