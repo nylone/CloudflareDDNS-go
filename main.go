@@ -2,49 +2,52 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/bwmarrin/lit"
 	"github.com/kkyr/fig"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 )
 
-const CONFIG_FILE = "config.yml"
-const BASE_API_URL = "https://api.cloudflare.com/client/v4/zones/"
+const configFile = "config.yml"
+const baseAPIUrl = "https://api.cloudflare.com/client/v4/zones/"
 
 var (
-	records  []zoneAndRecords
-	cfg		Config
+	records []zoneAndRecords
+	cfg     config
 )
 
 func init() {
-	log.Print("Starting up")
+	lit.Info("\nStarting up")
 	// Loads the config file
-	checkErr(fig.Load(&cfg, fig.File(CONFIG_FILE)))
+	checkErr(fig.Load(&cfg, fig.File(configFile)))
 	http.DefaultClient.Timeout = time.Second * 3
 	getRecords()
-	log.Print("Finished initial setup")
+	if strings.ToLower(cfg.LogLevel) == "info" {
+		lit.LogLevel = lit.LogInformational
+	}
+	lit.Info("\nFinished initial setup")
 }
 
 func main() {
 	wg := sync.WaitGroup{}
 	var (
-		currIPv4 string = ""
-		currIPv6 string = ""
-		newIPv4 string
-		newIPv6 string
+		currIPv4 string
+		currIPv6 string
+		newIPv4  string
+		newIPv6  string
 	)
 	for {
-		log.Print("Checking public IP updates")
+		lit.Info("\nChecking public IP updates")
 		wg.Add(2)
 		go getIP("https://api.ipify.org", &newIPv4, &wg)
 		go getIP("https://api6.ipify.org", &newIPv6, &wg)
 		wg.Wait()
-		log.Print("public IP check complete")
+		lit.Info("\npublic IP check complete")
 		if currIPv4 != newIPv4 {
-			log.Print("detected public IPv4 change.", currIPv4, " setting to ", newIPv4)
+			lit.Info("\ndetected public IPv4 change.%s setting to ", currIPv4, newIPv4)
 			currIPv4 = newIPv4
 			for _, zone := range records {
 				zone := zone
@@ -58,7 +61,7 @@ func main() {
 			}
 		}
 		if currIPv6 != newIPv6 {
-			log.Print("detected public IPv6 change.", currIPv6, " setting to ", newIPv6)
+			lit.Info("\ndetected public IPv6 change.%s setting to %s", currIPv6, newIPv6)
 			currIPv6 = newIPv6
 			for _, zone := range records {
 				zone := zone
@@ -72,14 +75,14 @@ func main() {
 			}
 		}
 		wg.Wait()
-		log.Print("Update cycle complete")
+		lit.Info("\nUpdate cycle complete")
 		time.Sleep(cfg.Timeout)
 	}
 }
 
 func checkErr(err error) {
 	if err != nil {
-		log.Fatalln(err)
+		lit.Error("\n%s", err)
 	}
 }
 
@@ -93,7 +96,7 @@ func getIP(url string, ip *string, group *sync.WaitGroup) {
 		}(response.Body)
 		out, err := io.ReadAll(response.Body)
 		if err != nil {
-			log.Fatalln(err)
+			lit.Error("\n%s", err)
 		}
 		*ip = string(out)
 	}
@@ -101,8 +104,8 @@ func getIP(url string, ip *string, group *sync.WaitGroup) {
 
 // return A and AAAA records hosted on cloudflare
 func getRecords() {
-	request, err := http.NewRequest("GET", BASE_API_URL, nil)
-	request.Header.Add("authorization", "Bearer " + cfg.Token)
+	request, err := http.NewRequest("GET", baseAPIUrl, nil)
+	request.Header.Add("authorization", "Bearer "+cfg.Token)
 	checkErr(err)
 	response, err := http.DefaultClient.Do(request)
 	checkErr(err)
@@ -118,7 +121,7 @@ func getRecords() {
 			if allowedRecords, ok := cfg.Domains[zone.Name]; ok {
 				wg.Add(1)
 				records = append(records, zoneAndRecords{
-					ZoneId:  zone.Id,
+					ZoneID:  zone.ID,
 					Records: nil,
 				})
 				v4mutex := sync.Mutex{}
@@ -126,8 +129,8 @@ func getRecords() {
 				i, zone := i, zone
 				go func() {
 					defer wg.Done()
-					request, err := http.NewRequest("GET", strings.Join([]string{BASE_API_URL, zone.Id, "/dns_records/"}, ""), nil)
-					request.Header.Add("authorization", "Bearer " + cfg.Token)
+					request, err := http.NewRequest("GET", strings.Join([]string{baseAPIUrl, zone.ID, "/dns_records/"}, ""), nil)
+					request.Header.Add("authorization", "Bearer "+cfg.Token)
 					checkErr(err)
 					response, err := http.DefaultClient.Do(request)
 					checkErr(err)
@@ -157,11 +160,11 @@ func getRecords() {
 	}
 }
 
-func patchRecord(zone zoneAndRecords, record DnsRecord, ip string, wg *sync.WaitGroup) {
+func patchRecord(zone zoneAndRecords, record dnsRecord, ip string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	request, err := http.NewRequest("PATCH", strings.Join([]string{BASE_API_URL, zone.ZoneId, "/dns_records/", record.Id}, ""),
+	request, err := http.NewRequest("PATCH", strings.Join([]string{baseAPIUrl, zone.ZoneID, "/dns_records/", record.ID}, ""),
 		strings.NewReader("{\"content\":\""+ip+"\"}"))
-	request.Header.Add("authorization", "Bearer " + cfg.Token)
+	request.Header.Add("authorization", "Bearer "+cfg.Token)
 	request.Header.Add("content-type", "application/json")
 	checkErr(err)
 	response, err := http.DefaultClient.Do(request)
@@ -172,6 +175,6 @@ func patchRecord(zone zoneAndRecords, record DnsRecord, ip string, wg *sync.Wait
 	var apiResponse apiFeedback
 	checkErr(json.NewDecoder(response.Body).Decode(&apiResponse))
 	if !apiResponse.Success {
-		log.Print(apiResponse.Errors)
+		lit.Error("\n%s", apiResponse.Errors)
 	}
 }
